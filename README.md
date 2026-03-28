@@ -127,6 +127,15 @@ curl -X POST http://127.0.0.1:8000/query \
 
 如果没有配置 Gemini key，系统会自动退回到纯规则版本。
 
+如果日志里出现：
+
+```text
+gemini_intent_skip reason=disabled
+gemini_refine_skip reason=disabled
+```
+
+这说明服务进程启动时没有读到 `GEMINI_API_KEY`。
+
 ## 接入 Gemini 免费 LLM
 
 按照 Google 官方文档，Gemini Developer API 提供 free tier，Python SDK 是 `google-genai`。我现在默认接的是 `gemini-2.5-flash-preview-09-2025`，并保留 `gemini-2.5-flash` 作为回退。
@@ -138,7 +147,26 @@ curl -X POST http://127.0.0.1:8000/query \
 - [Gemini text generation](https://ai.google.dev/gemini-api/docs/text-generation)
 
 1. 在 Google AI Studio 创建 API key
-2. 配置环境变量
+2. 推荐使用 `.env`
+
+先参考 [`.env.example`](/Users/liuchenguang/Documents/job_apply_tool/small-agent/.env.example) 新建本地 `.env`：
+
+```bash
+cp .env.example .env
+```
+
+然后填入真实值：
+
+```bash
+GEMINI_API_KEY=your_api_key
+GEMINI_MODEL=gemini-2.5-flash-preview-09-2025
+GEMINI_FALLBACK_MODEL=gemini-2.5-flash
+APP_STORAGE_DIR=storage
+```
+
+应用启动时会自动加载项目根目录下的 `.env`。
+
+3. 或者继续使用 shell 环境变量
 
 ```bash
 export GEMINI_API_KEY="your_api_key"
@@ -146,7 +174,7 @@ export GEMINI_MODEL="gemini-2.5-flash-preview-09-2025"
 export GEMINI_FALLBACK_MODEL="gemini-2.5-flash"
 ```
 
-3. 启动服务
+4. 启动服务
 
 ```bash
 uvicorn app.api:app --reload

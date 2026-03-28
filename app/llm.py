@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 
 from pydantic import BaseModel
@@ -10,6 +11,8 @@ try:
 except ImportError:  # pragma: no cover
     genai = None
     types = None
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiIntentOutput(BaseModel):
@@ -36,26 +39,32 @@ class GeminiBase:
 
     def _generate(self, *, contents: str, config):
         if not self.enabled:
+            logger.info("gemini_disabled api_key_present=%s sdk_ready=%s", bool(self.api_key), genai is not None and types is not None)
             return None
 
         client = self._get_client()
         for model_name in [self.model, self.fallback_model]:
             try:
+                logger.info("gemini_generate_start model=%s", model_name)
                 return client.models.generate_content(
                     model=model_name,
                     contents=contents,
                     config=config,
                 )
-            except Exception:
+            except Exception as exc:
+                logger.warning("gemini_generate_failed model=%s error=%s", model_name, exc)
                 continue
+        logger.warning("gemini_generate_exhausted tried_models=%s", [self.model, self.fallback_model])
         return None
 
 
 class GeminiIntentClassifier(GeminiBase):
     def classify(self, *, query: str) -> GeminiIntentOutput | None:
         if not self.enabled:
+            logger.info("gemini_intent_skip reason=disabled")
             return None
 
+        logger.info("gemini_intent_start query=%r", query[:200])
         response = self._generate(
             contents=self._build_prompt(query),
             config=types.GenerateContentConfig(
@@ -66,16 +75,22 @@ class GeminiIntentClassifier(GeminiBase):
             ),
         )
         if response is None:
+            logger.warning("gemini_intent_no_response")
             return None
 
         parsed = getattr(response, "parsed", None)
         if isinstance(parsed, GeminiIntentOutput):
+            logger.info("gemini_intent_success intent=%s entity=%r reason=%r", parsed.intent, parsed.entity, parsed.reason)
             return parsed
         if isinstance(parsed, dict):
             try:
-                return GeminiIntentOutput.model_validate(parsed)
-            except Exception:
+                validated = GeminiIntentOutput.model_validate(parsed)
+                logger.info("gemini_intent_success intent=%s entity=%r reason=%r", validated.intent, validated.entity, validated.reason)
+                return validated
+            except Exception as exc:
+                logger.warning("gemini_intent_parse_failed error=%s payload=%r", exc, parsed)
                 return None
+        logger.warning("gemini_intent_unparsed parsed_type=%s", type(parsed).__name__)
         return None
 
     def _build_prompt(self, query: str) -> str:
@@ -114,8 +129,10 @@ class GeminiAnswerRefiner(GeminiBase):
         routing_reason: str,
     ) -> str | None:
         if not self.enabled:
+            logger.info("gemini_refine_skip reason=disabled")
             return None
 
+        logger.info("gemini_refine_start intent=%s entity=%r sources=%d", intent, entity, len(sources))
         response = self._generate(
             contents=self._build_prompt(
                 query=query,
@@ -131,10 +148,15 @@ class GeminiAnswerRefiner(GeminiBase):
             ),
         )
         if response is None:
+            logger.warning("gemini_refine_no_response")
             return None
 
         text = getattr(response, "text", None)
         cleaned = (text or "").strip()
+        if cleaned:
+            logger.info("gemini_refine_success chars=%d preview=%r", len(cleaned), cleaned[:160])
+        else:
+            logger.warning("gemini_refine_empty_text")
         return cleaned or None
 
     def _build_prompt(
