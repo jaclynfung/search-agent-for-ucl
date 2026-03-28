@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UCL Bartlett Info Agent</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">UCL Bartlett Demo</p>
+        <h1>Explore The Bartlett through its current themes.</h1>
+        <p class="subtext">
+          A minimal single-agent demo with intent detection, search routing, and
+          local FAISS retrieval for UCL The Bartlett information.
+        </p>
+      </section>
+
+      <section class="panel">
+        <form id="query-form" class="query-form">
+          <label for="query" class="label">Your question</label>
+          <div class="composer">
+            <input
+              id="query"
+              name="query"
+              type="text"
+              placeholder="Try: What is UCL Bartlett saying about global governance?"
+              autocomplete="off"
+            />
+            <button id="submit-btn" type="submit">Ask</button>
+          </div>
+        </form>
+
+        <section id="result" class="result hidden" aria-live="polite">
+          <div class="result-header">
+            <h2>Answer</h2>
+            <div class="badge-row">
+              <span id="confidence" class="badge"></span>
+              <span id="llm-used" class="badge secondary hidden"></span>
+            </div>
+          </div>
+          <p id="answer" class="answer"></p>
+          <div class="meta-grid">
+            <div>
+              <p class="meta-label">Intent</p>
+              <p id="intent" class="meta-value"></p>
+            </div>
+            <div>
+              <p class="meta-label">Entity</p>
+              <p id="entity" class="meta-value"></p>
+            </div>
+          </div>
+          <div>
+            <p class="meta-label">Routing reason</p>
+            <p id="routing" class="meta-value"></p>
+          </div>
+          <div>
+            <p class="meta-label">Sources</p>
+            <ul id="sources" class="sources"></ul>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+  </html>
